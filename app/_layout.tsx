@@ -1,24 +1,36 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+// app/_layout.tsx
+import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <>
+      <StatusBar style="light" />
+      <Tabs
+        screenOptions={{
+          tabBarStyle: {
+            backgroundColor: '#0D0D0D',
+            borderTopColor: '#222',
+          },
+          tabBarActiveTintColor: '#E8E0D5',
+          tabBarInactiveTintColor: '#555',
+          headerStyle: { backgroundColor: '#0D0D0D' },
+          headerTintColor: '#E8E0D5',
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{ title: 'Closet', tabBarLabel: 'Closet' }}
+        />
+        <Tabs.Screen
+          name="upload"
+          options={{ title: 'Add Item', tabBarLabel: 'Add' }}
+        />
+        <Tabs.Screen
+          name="outfits"
+          options={{ title: 'Outfits', tabBarLabel: 'Outfits' }}
+        />
+      </Tabs>
+    </>
   );
 }
