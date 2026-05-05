@@ -1,13 +1,18 @@
 // app/outfits.tsx
-import { useState, useCallback } from 'react';
-import {
-  View, Text, Image, TouchableOpacity,
-  StyleSheet, ScrollView, ActivityIndicator, Alert, FlatList,
-} from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { generateOutfits, recordSwipe } from '../lib/api';
 import * as Location from 'expo-location';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator, Alert, FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { generateOutfits, recordSwipe } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 const OCCASIONS = [
   { id: 'casual', label: 'Casual' },
@@ -50,7 +55,7 @@ const getCity = async (): Promise<string> => {
       // Timeout after 5 seconds
       const loc = await Promise.race([
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
       ]);
       const [geo] = await Location.reverseGeocodeAsync((loc as any).coords);
       if (geo?.city) return geo.city;
@@ -214,11 +219,7 @@ const doGenerate = async (items: any[], city: string) => {
                 </ScrollView>
                 <View style={styles.savedMeta}>
                   <Text style={styles.savedVibe}>{outfit.vibe}</Text>
-                  {weather ? (
-                    <View style={styles.weatherBadge}>
-                      <Text style={styles.weatherText}>🌤 {weather}</Text>
-                    </View>
-                  ) : null}
+                  
                   <Text style={styles.savedOccasion}>{outfit.occasion}</Text>
                 </View>
                 <Text style={styles.savedRationale}>{outfit.rationale}</Text>
@@ -278,6 +279,11 @@ const doGenerate = async (items: any[], city: string) => {
       <ScrollView contentContainerStyle={styles.cardContent}>
         <Text style={styles.counter}>{currentIndex + 1} / {outfits.length}</Text>
         <Text style={styles.vibe}>{outfit.vibe}</Text>
+        {weather ? (
+          <View style={styles.weatherBadge}>
+            <Text style={styles.weatherText}>🌤 {weather}</Text>
+          </View>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.itemRow}>
           {outfit.itemDetails?.map((item: any) => (
