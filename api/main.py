@@ -8,6 +8,7 @@ import base64
 import json
 import os
 import httpx
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +24,7 @@ app.add_middleware(
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 OPENWEATHER_KEY = os.getenv("OPENWEATHER_API_KEY")
-
+FASHN_API_KEY = os.getenv("FASHN_API_KEY")
 
 # ── /tag-item ──────────────────────────────────────────────────
 @app.post("/tag-item")
@@ -210,6 +211,74 @@ async def record_swipe(req: SwipeRequest):
     # TODO phase 2: save to Supabase swipe_log table
     return {"ok": True}
 
+# ── /try-on ────────────────────────────────────────────────────
+class TryOnRequest(BaseModel):
+    model_image_url: str   # photo of the user
+    garment_image_url: str # photo of the garment
+    category: str = "tops" # tops / bottoms / one-pieces
+
+@app.post("/try-on")
+async def try_on(req: TryOnRequest):
+    """Send model + garment photos to Fashn.ai and return try-on result."""
+    FASHN_KEY = os.getenv("FASHN_API_KEY")
+    if not FASHN_KEY:
+        raise HTTPException(status_code=500, detail="Fashn API key not configured")
+
+    headers = {
+        "Authorization": f"Bearer {FASHN_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    # Step 1 — start the try-on job
+    async with httpx.AsyncClient() as http:
+        res = await http.post(
+            "https://api.fashn.ai/v1/run",
+            headers=headers,
+            json={
+                model_name": "tryon",
+                "inputs": {
+                    "model_image": req.model_image_url,
+                    "garment_image": req.garment_image_url,
+                    "category": req.category,
+                }
+            },
+            timeout=30,
+        )
+
+    if res.status_code != 200:
+        print(f"[FASHN ERROR] Status: {res.status_code}")
+        print(f"[FASHN ERROR] Response: {res.text}")
+        raise HTTPException(status_code=res.status_code, detail=f"Fashn error: {res.text}")
+
+    data = res.json()
+    prediction_id = data.get("id")
+    if not prediction_id:
+        raise HTTPException(status_code=500, detail="No prediction ID returned")
+
+    # Step 2 — poll for result (Fashn is async, takes 10-30 seconds)
+    async with httpx.AsyncClient() as http:
+        for attempt in range(30):  # poll up to 30 times
+            await asyncio.sleep(2)
+            poll = await http.get(
+                f"https://api.fashn.ai/v1/status/{prediction_id}",
+                headers=headers,
+                timeout=10,
+            )
+            result = poll.json()
+            status = result.get("status")
+
+            if status == "completed":
+                output = result.get("output", [])
+                if output:
+                    return {"image_url": output[0], "status": "completed"}
+                raise HTTPException(status_code=500, detail="No output image returned")
+
+            if status == "failed":
+                raise HTTPException(status_code=500, detail=f"Try-on failed: {result.get('error')}")
+
+            # Still processing — keep polling
+
+    raise HTTPException(status_code=504, detail="Try-on timed out after 60 seconds")
 
 # ── Weather helper ─────────────────────────────────────────────
 async def fetch_weather(city: str) -> str:

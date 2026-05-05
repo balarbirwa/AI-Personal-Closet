@@ -138,6 +138,20 @@ export default function RootLayout() {
           }}
         />
         <Tabs.Screen
+          name="tryon"
+          options={{
+            title: 'Try On',
+            tabBarLabel: 'Try On',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? 'body' : 'body-outline'}
+                size={24}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="auth"
           options={{ href: null }}
         />
