@@ -24,6 +24,7 @@ export async function generateOutfits(params: {
   items: any[];
   occasion: string;
   city: string;
+  swipe_history?: any[];
 }) {
   const res = await fetch(`${API_BASE_URL}/generate-outfits`, {
     method: 'POST',
@@ -40,6 +41,7 @@ export async function recordSwipe(params: {
   outfit_id: string;
   signal: 'liked' | 'disliked' | 'saved';
   item_ids: string[];
+  user_id?: string;
 }) {
   const res = await fetch(`${API_BASE_URL}/swipe`, {
     method: 'POST',

@@ -80,6 +80,7 @@ class GenerateRequest(BaseModel):
     items: List[dict]
     occasion: str
     city: str
+    swipe_history: List[dict] = [] 
 
 @app.post("/generate-outfits")
 async def generate_outfits(req: GenerateRequest):
@@ -95,18 +96,71 @@ async def generate_outfits(req: GenerateRequest):
         for item in req.items
     ])
 
+#     system = """You are a personal stylist AI. You suggest outfits using items from a real wardrobe.
+# Rules:
+# - Only use item IDs that exist in the wardrobe list
+# - Never mix formality levels more than 1 step apart
+# - Always consider the weather
+# - Each outfit needs at least 2 items, ideally 3-4
+# Return ONLY a valid JSON array. No explanation, no markdown."""
+
+#     user_msg = f"""
+# Weather in {req.city}: {weather}
+# Occasion: {req.occasion}
+
+# Wardrobe:
+# {wardrobe}
+
+# Generate 4 outfit suggestions. Return this exact JSON structure:
+# [
+#   {{
+#     "outfit_id": "unique-string-1",
+#     "item_ids": ["id-from-wardrobe", "id-from-wardrobe"],
+#     "rationale": "1-2 sentences on why this works for today",
+#     "vibe": "one of: casual / smart-casual / office / elevated-casual / outdoor",
+#     "weather_score": 4,
+#     "occasion_score": 5
+#   }}
+# ]"""
+        # Build taste summary from swipe history
+    from collections import Counter
+
+    taste_summary = ''
+    if req.swipe_history:
+        liked = [s for s in req.swipe_history if s.get('signal') in ('liked', 'saved')]
+        disliked = [s for s in req.swipe_history if s.get('signal') == 'disliked']
+
+        def top_tags(records, n=5):
+            all_tags = []
+            for r in records:
+                all_tags.extend(r.get('item_tags', []))
+            return [tag for tag, _ in Counter(all_tags).most_common(n)]
+
+        liked_tags = top_tags(liked)
+        disliked_tags = top_tags(disliked)
+
+        if liked_tags or disliked_tags:
+            taste_summary = f"""
+LEARNED STYLE PREFERENCES (from {len(req.swipe_history)} past swipes):
+- This user consistently enjoys: {', '.join(liked_tags) if liked_tags else 'still learning'}
+- This user tends to avoid: {', '.join(disliked_tags) if disliked_tags else 'still learning'}
+- Liked outfit count: {len(liked)}, Disliked: {len(disliked)}
+Prioritize suggestions that match their preferences.
+"""
+
     system = """You are a personal stylist AI. You suggest outfits using items from a real wardrobe.
 Rules:
 - Only use item IDs that exist in the wardrobe list
 - Never mix formality levels more than 1 step apart
 - Always consider the weather
 - Each outfit needs at least 2 items, ideally 3-4
+- If style preferences are provided, follow them closely
 Return ONLY a valid JSON array. No explanation, no markdown."""
 
     user_msg = f"""
 Weather in {req.city}: {weather}
 Occasion: {req.occasion}
-
+{taste_summary}
 Wardrobe:
 {wardrobe}
 

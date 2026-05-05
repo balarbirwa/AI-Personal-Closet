@@ -79,6 +79,36 @@ const generate = async () => {
     }
 
     const city = await getCity();
+    // Fetch swipe history for taste learning
+    let swipe_history: any[] = [];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: swipes } = await supabase
+        .from('swipe_log')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (swipes) {
+        // Attach item tags to each swipe for the taste analyzer
+        swipe_history = swipes.map((s: any) => ({
+          signal: s.signal,
+          item_tags: items
+            .filter((i: any) => s.item_ids?.includes(i.id))
+            .flatMap((i: any) => [
+              i.type,
+              i.primary_color,
+              i.fit,
+              ...(i.style_tags || []),
+              ...(i.occasions || []),
+            ])
+            .filter(Boolean),
+        }));
+      }
+    } catch (e) {
+      console.log('Could not fetch swipe history');
+    }
 
     const matchingItems = items.filter((i: any) => i.occasions?.includes(occasion));
     if (matchingItems.length === 0) {
@@ -87,13 +117,13 @@ const generate = async () => {
         `You don't have any items tagged for ${occasion}. We'll suggest the closest alternatives.`,
         [
           { text: 'Cancel', onPress: () => { setPhase('pick'); setLoading(false); }, style: 'cancel' },
-          { text: 'Try anyway', onPress: () => doGenerate(items, city) },
+          { text: 'Try anyway', onPress: () => doGenerate(items, city, swipe_history) },
         ]
       );
       return;
     }
 
-    await doGenerate(items, city);
+    await doGenerate(items, city, swipe_history);
       } catch (e: any) {
         Alert.alert('Generation failed', e.message);
         setPhase('pick');
@@ -102,9 +132,9 @@ const generate = async () => {
       }
     };
 
-const doGenerate = async (items: any[], city: string) => {
+const doGenerate = async (items: any[], city: string, swipe_history: any[]) => {
   try {
-    const result = await generateOutfits({ items, occasion, city });
+    const result = await generateOutfits({ items, occasion, city, swipe_history });
 
     if (!result.outfits || result.outfits.length === 0) {
       Alert.alert('No outfits found', `Couldn't build a ${occasion} outfit. Try a different occasion.`);
@@ -131,7 +161,13 @@ const doGenerate = async (items: any[], city: string) => {
     const outfit = outfits[currentIndex];
     if (!outfit) return;
 
-    recordSwipe({ outfit_id: outfit.outfit_id, signal, item_ids: outfit.item_ids }).catch(console.error);
+    const { data: { user } } = await supabase.auth.getUser();
+    recordSwipe({ 
+      outfit_id: outfit.outfit_id, 
+      signal, 
+      item_ids: outfit.item_ids,
+      user_id: user?.id 
+    }).catch(console.error);
 
     // Save to Supabase if loved
     if (signal === 'saved') {
