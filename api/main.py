@@ -235,7 +235,7 @@ async def try_on(req: TryOnRequest):
             "https://api.fashn.ai/v1/run",
             headers=headers,
             json={
-                model_name": "tryon",
+                "model_name": "tryon",
                 "inputs": {
                     "model_image": req.model_image_url,
                     "garment_image": req.garment_image_url,
