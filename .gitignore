@@ -1,0 +1,16 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+.DS_Store
+
+# Keys — never commit these
+*.env
+.env.local
+mobile/lib/config.ts
