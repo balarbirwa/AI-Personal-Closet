@@ -135,7 +135,9 @@ const doGenerate = async (items: any[], city: string) => {
 
     // Save to Supabase if loved
     if (signal === 'saved') {
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('saved_outfits').insert({
+        user_id: user?.id,
         outfit_id: outfit.outfit_id,
         item_ids: outfit.item_ids,
         item_details: outfit.itemDetails,

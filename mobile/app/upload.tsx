@@ -1,14 +1,19 @@
 // app/upload.tsx
+import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
-  View, Text, Image, TouchableOpacity,
-  StyleSheet, ScrollView, ActivityIndicator, Alert,
+  ActivityIndicator, Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
-import { supabase } from '../lib/supabase';
 import { tagItem } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 const OCCASIONS = ['casual', 'office', 'smart-casual', 'outdoor', 'athletic', 'formal'];
 const SEASONS = ['spring', 'summer', 'fall', 'winter'];
@@ -67,7 +72,9 @@ export default function UploadScreen() {
       const { error: uploadError } = await supabase.storage.from('garments').upload(fileName, decode(base64), { contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('garments').getPublicUrl(fileName);
+      const { data: { user } } = await supabase.auth.getUser();
       const { error: dbError } = await supabase.from('items').insert({
+        user_id: user?.id,
         image_url: urlData.publicUrl,
         type: tags.type,
         primary_color: tags.primary_color,
